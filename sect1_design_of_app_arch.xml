@@ -1,0 +1,39 @@
+<sect1 xmlns="http://docbook.org/ns/docbook"
+       xmlns:xi="http://www.w3.org/2001/XInclude">
+    <title>1 - design of application architecture</title>
+    <sect2>
+        <title>1.1 - console &amp; gui</title>
+        <figure>
+            <title>console &amp; gui</title>
+            <inlinegraphic fileref="../img/console.png" />
+            <inlinegraphic fileref="../img/gui.png" />
+        </figure>
+        <para> 对于console程序，每个应用都有特定的交互（ui）机制；gui系统则为应用提供了通用的ui框架（通用的事件处理，响应由应用定制），gui框架通常使用消息绑定（使用虚函数会导致复杂的静态结构和大量的虚函数表项冗余）。应用逻辑理论上应该可重用于不同的ui，为此引入了控制器和mvc模式。</para>
+    </sect2>
+    <sect2>
+        <title>1.2 - mvc</title>
+        <figure>
+            <title>mvc</title>
+            <inlinegraphic fileref="../img/mvc.png" />
+        </figure>
+        <itemizedlist>
+            <listitem>ui消息包括视图消息（对应视图事件，应用的响应以视图本身规定的方式影响视图），通常用delegate（按视图规定的协议）定制；用户消息（对应用户事件），通常用视图自有的消息总线（target-action）（无协议）定制（指定视图的指定事件的响应）。应用消息，系统消息和应用通知均由应用逻辑定义（可重用于不同的ui和系统），通常用消息总线绑定。</listitem>
+            <listitem>应用逻辑内部仍可以划分机制（业务机制）和策略，也仍可以使用delegate, target-action等定制机制，如果有需要重用于不同框架的定制部分，仍可以用消息总线绑定。</listitem>
+            <listitem>使用消息总线，应用逻辑可以灵活部署：进程内，进程外，网络（包括web）；并且使得视图控制器和系统控制器也可以分开部署。</listitem>
+        </itemizedlist>
+    </sect2>
+    <sect2>
+        <title>1.3 - concurrency</title>
+        <para>多个事件发生的时间太接近以致应用来不及以顺序的方式响应即称为并发。应用通过两种策略处理并发：多任务和异步。多任务即应用通过可同时（而非顺序）执行的多个任务同时响应并发事件（由多个事件循环及其控制器任务捕获并响应多个并发事件）。异步即应用仍以顺序的方式响应并发事件，但总是通过异步调用（不等待调用完成即返回，调用完成后以事件方式通知）方式控制响应时间以及时响应并发事件（由单个事件循环及其控制器任务捕获并（通过控制器启动多个应用逻辑任务）响应多个并发事件）；并非所有操作都支持异步，同步操作需要启动新任务（后台任务）来执行以实现异步调用（控制器启动后台任务发送应用消息（后台应用逻辑任务），后台应用逻辑任务以事件方式发送应用通知），多任务首先是一种机制，异步策略同样依赖于它。并发策略通常取决于事件循环，同一个事件循环中的事件采用异步策略处理其并发，反之则采用多任务策略。</para>
+        <figure>
+            <title>application architecture</title>
+            <graphic fileref="../img/app_arch.png" />
+        </figure>
+        <itemizedlist>
+            <listitem>每个事件循环及其控制器均为独立任务（前台/交互任务），通常ui事件循环（界面任务）为主任务。</listitem>
+            <listitem>应用逻辑可以声明对某个应用消息的响应相对耗时，控制器即可选择启动后台任务发送该应用消息；也就是说，尽管应用逻辑内部仍可使用多任务机制，但应用逻辑本身并不决定其运行在前台还是后台。</listitem>
+            <listitem>应用逻辑通常在当前任务发送系统消息；也就是说，系统控制器通常运行在应用逻辑任务上下文。</listitem>
+            <listitem>ui操作通常不是线程安全的，只能在界面任务（主任务）上下文执行，因此，应用通知也必须在界面任务上下文发送；也就是说，如果应用逻辑（发送者）当前没有运行在界面任务上下文，则需要使用任务间的消息发送机制，即生成一个消息发送事件到目标任务的事件队列，由其事件循环在目标任务发送消息。</listitem>
+        </itemizedlist>
+    </sect2>
+</sect1>

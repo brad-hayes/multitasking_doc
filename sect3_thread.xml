@@ -1,0 +1,239 @@
+<sect1 xmlns="http://docbook.org/ns/docbook"
+       xmlns:xi="http://www.w3.org/2001/XInclude">
+    <title>3 - thread</title>
+    <sect2>
+        <title>3.1 - posix thread and cocoa thread</title>
+        <para>cocoa thread（NSThread）是基于posix thread（pthread）的封装。pthread将线程分为joinable（non-detached）和detached两种；joinable线程相当于子线程，其它线程可以join它来等待它终止（terminate，包括线程函数返回及与之等价的调用pthread_exit(...)）并获取其线程函数的返回值，并且仅当被joined之后线程相关资源才会释放；detached线程则反之（不可join且终止后相关资源即被释放）；pthread缺省是joinable的，cocoa thread缺省是detach的。</para>
+        <programlisting><![CDATA[
+    int pthread_create(pthread_t *thread,
+                       pthread_attr_t const *attr,
+                       void *(*start_routine)(void *), void *arg);
+    void pthread_exit(void *ret);
+
+    int pthread_join(pthread_t thread, void **ret);
+    int pthread_detach(pthread_t thread);
+
+    int pthread_attr_init(pthread_attr_t *attr);
+    int pthread_attr_setdetachstate(pthread_attr_t *attr, int state);
+    int pthread_attr_destroy(pthread_attr_t *attr);
+        ]]></programlisting>
+        <para>在mac os x v10.5之前，cocoa程序通常用NSThread的类方法detachNewThreadSelector:toTarget:withObject:（从mac os x v10.5之后及ios中，等价于直接向目标对象发送performSelectorInBackground:withObject:消息）启动新线程并在新线程执行目标对象的指定方法并传入指定参数对象，由于该方法返回void，因此应用只能在新线程启动后在新线程中获取thread并访问其属性；从mac os x v10.5之后及ios中，还可以直接构造thread并用start方法启动以便在新线程启动之前即可访问thread的属性（如栈大小）。线程在终止之前会retain目标对象及参数对象；此外，每个线程同样需要独立的最外层的autorelease pool。注意，当应用中首次用cocoa thread启动新线程时，应用会切换为多线程状态（通过发送NSWillBecomeMultiThreadedNotification通知（到通知中心）），cocoa仅当应用处于多线程状态（isMultiThreaded）时使用同步机制（以免影响单线程应用的性能）；pthread不会导致应用切换线程状态，因此如果需要使用cocoa就必须手工切换（通常用cocoa thread启动空白线程（do nothing）即可）。</para>
+        <programlisting><![CDATA[
+    NSThread:
+        + (void) detachNewThreadSelector: (SEL)sel
+                                toTarget: (id)target
+                              withObject: (id)arg;
+        - (id) initWithTarget: (id)target selector: (SEL)sel object: (id)arg;
+        - (void) start;
+        + (void) exit;
+        - (void) cancel;
+        - (BOOL) isCancelled;
+
+        + (void) sleepUntilDate: (NSDate *)date;
+        + (void) sleepForTimeInterval: (NSTimeInterval)interval;
+
+        + (NSThread *) mainThread;
+        + (NSThread *) currentThread;
+        + (BOOL) isMainThread;
+        - (BOOL) isMainThread;
+
+        - (BOOL) isExecuting;
+        - (BOOL) isFinished;
+
+        + (BOOL) isMultiThreaded;
+
+    NSObject:
+        - (void) performSelectorInBackground: (SEL)sel withObject: (id)arg;
+        ]]></programlisting>
+    </sect2>
+    <sect2>
+        <title>3.2 - runloop and inter-thread communication</title>
+        <para>runloop（NSRunLoop）是一个由事件唤醒（并调用事件句柄）的循环，事件分为两种：input和定时，其中input事件会导致runloop退出，因此真正的事件循环实际上需要循环运行runloop；除了由事件唤醒，runloop还可以设置超时（唤醒并退出）。每个线程都有独立的runloop对象，主线程在application的run方法中启动了事件循环（循环运行runloop），交互任务通常都需要启动其事件循环。除了响应事件，runloop还向其observer发送progress通知，可以设置runloop的mode来过滤其事件源和observer，没有事件源的runloop会即刻退出；通常，input事件会保留，定时事件则会合并。</para>
+        <programlisting><![CDATA[
+    NSRunLoop:
+        + (NSRunLoop *) currentRunLoop;
+
+        - (BOOL) runMode: (NSString *)mode beforeDate: (NSDate *)date;
+
+        // - repeate runloop in NSDefaultRunLoopMode infinitely (as event loop)
+        - (void) run;
+        // - repeate runloop in NSDefaultRunLoopMode until date (as event loop)
+        - (void) runUntilDate: (NSDate *)date;
+        ]]></programlisting>
+        <sect3>
+            <title>3.2.1 - mach port</title>
+            <para>mach port（NSMachPort: NSPort）是mach微内核提供的本地进程间通信机制（通过本地端口发送接收消息），由于可以作为runloop的input事件源（port-based input source，生成port消息到达事件并自动委托给port的delegate响应），因此也是一种常用的线程间通信机制。</para>
+            <programlisting><![CDATA[
+    NSPort:
+        + (NSPort *) port;
+        // - must invalidated before released
+        - (void) invalidate;
+
+        - (void) setDelegate: (id<NSPortDelegate>)obj;
+
+        - (BOOL) sendBeforeDate: (NSDate *)date
+                          msgid: (NSUInteger)msgid
+                     components: (NSMutableArray *)components
+                           from: (NSPort *)port
+                       reserved: (NSUInteger)size;
+
+        - (void) scheduleInRunLoop: (NSRunLoop *)runloop
+                           forMode: (NSString *)mode
+        - (void) removeFromRunLoop: (NSRunLoop *)runloop
+                           forMode: (NSString *)mode
+
+    NSPortDelegate:
+        // - no interface of NSPortMessage in ios
+        - (void) handlePortMessage: (NSPortMessage *)message;
+
+    // no interface in ios
+    NSPortMessage:
+        - (uint32_t) msgid;
+        - (NSArray *) components;
+
+    NSRunLoop:
+        - (void) addPort: (NSPort *)port forMode: (NSString *)mode;
+        - (void) removePort: (NSPort *)port forMode: (NSString *)mode;
+            ]]></programlisting>
+        </sect3>
+        <sect3>
+            <title>3.2.2 - inter-thread messaging</title>
+            <para>最常用的线程间通信机制。当对象调用performSelector:onThread:...等线程间的消息发送方法，perform selector source（由cocoa实现）作为目标线程的runloop的custom input source生成消息发送事件从而在目标线程中发送消息。实际上，gcd的main队列中的任务也通过类似的机制调度。</para>
+            <programlisting><![CDATA[
+    NSObject:
+        - (void) performSelector: (SEL)sel
+                        onThread: (NSThread *)thread
+                      withObject: (id)arg
+                   waitUntilDone: (BOOL)wait;
+        - (void) performSelectorOnMainThread: (SEL)sel
+                                  withObject: (id)arg
+                               waitUntilDone: (BOOL)wait;
+            ]]></programlisting>
+        </sect3>
+        <sect3>
+            <title>3.2.3 - timer</title>
+            <para>timer（NSTimer），定时事件源（定时器），并非线程间通信机制。比较特殊的是，尽管timer的生存期并不由runloop决定（和port一样），但runloop在timer invalidate之前会retain timer（不会retian port），timer在invalidate之前会retain目标对象和userinfo。</para>
+            <programlisting><![CDATA[
+    NSTimer:
+        + (NSTimer *) scheduledTimerWithTimeInterval: (NSTimeInterval)interval
+                                              target: (id)target
+                                            selector: (SEL)sel
+                                            userInfo: (id)userinfo
+                                             repeats: (BOOL)repeat;
+        - (void) invalidate;
+
+    NSRunLoop:
+        - (void) addTimer: (NSTimer *)timer forMode: (NSString *)mode;
+            ]]></programlisting>
+        </sect3>
+    </sect2>
+    <sect2>
+        <title>3.3 - synchronization</title>
+        <sect3>
+            <title>3.3.1 - atomic operation, memory barrier and volatile</title>
+            <para>原子操作是不会被其它线程中断的操作，因此其操作的资源不需用锁保护，最常见的原子操作就是test and set。编译器通常会优化它认为顺序无关的指令的执行顺序，但在多线程环境下，执行顺序可能对其它线程有潜在的影响，memory barrier用于确保之前的内存操作先于之后的内存操作。此外，编译器还会尽可能地将变量缓存在寄存器中来优化代码，导致其它线程可能不能获取其最新值，volatile存储修饰符指示编译器总是从内存访问变量。在特定的情形下，它们能以最小的性能损耗解决同步问题。</para>
+            <programlisting><![CDATA[
+    bool OSAtomicTestAndSet(uint32_t n, volatile void *pvalue);
+    void OSMemoryBarrier(void);
+            ]]></programlisting>
+        </sect3>
+        <sect3>
+            <title>3.3.2 - lock and condition</title>
+            <para>锁（又称为mutex）是最大值为1的信号量；cocoa还提供了recursive lock（NSRecursiveLock），支持在同一线程中多次加锁（不会死锁），但解锁的次数需要和加锁的次数平衡才能真正释放资源；此外，objc提供的@synchronized(objProtected){...}也相当于锁；还有一种跨进程和网络的distributed lock（NSDistributedLock）。条件变量可以实现信号量和信号量集，共享资源的集合仍由锁保护，代码检查所需的资源，如不满足则阻塞（等待特定条件）并解锁（以便其它线程访问共享资源），当线程释放了特定资源，则应发出相应的条件信号，唤醒某个阻塞在该资源上（等待该条件）的线程，该线程从等待中返回之前会重新加锁，以便继续访问共享资源；条件变量及其锁还可以合并成一个条件锁（NSConditionLock），支持限定条件下加锁以及解锁并设置条件。</para>
+            <programlisting><![CDATA[
+    int pthread_mutex_init(pthread_mutex_t *restrict mutex,
+                           pthread_mutexattr_t const *restrict attr);
+    int pthread_mutex_lock(pthread_mutex_t *mutex);
+    int pthread_mutex_unlock(pthread_mutex_t *mutex);
+
+    int pthread_cond_init(pthread_cond_t *restrict cond,
+                          pthread_condattr_t const *restrict attr);
+    int pthread_cond_wait(pthread_cond_t *restrict cond,
+                          pthread_mutex_t *restrict mutex);
+    int pthread_cond_signal(pthread_cond_t *cond);
+
+    NSLocking:
+        - (void) lock;
+        - (void) unlock;
+    NSLock: <NSLocking>
+        - (BOOL) tryLock;
+        - (BOOL) lockBeforeDate: (NSDate *)date;
+
+    NSConditionLock: <NSLocking>
+        - (id) initWithCondition: (NSInteger)condition;
+        - (NSInteger) condition;
+        - (void) lockWhenCondition: (NSInteger)condition;
+        - (void) unlockWithCondition: (NSInteger)condition;
+
+    NSCondition: <NSLocking>
+        - (void) wait;
+        - (BOOL) waitUntilDate: (NSDate *)date;
+        - (void) signal;
+        - (void) broadcast;
+            ]]></programlisting>
+            <example>
+                <title>producer and consumer</title>
+                <programlisting><![CDATA[
+    product_t buffer[SIZE];
+    int i_read, i_write;
+    pthread_mutex_t lock;
+    pthread_cond_t unempty;
+    pthread_cond_t unfull;
+
+    void init()
+    {
+        i_read = -1;
+        i_write = 0;
+        pthread_mutex_init(&lock, NULL);
+        pthread_cond_init(&unempty, NULL);
+        pthread_cond_init(&unfull, NULL);
+    }
+
+    void produce(product_t product)
+    {
+        pthread_mutex_lock(&lock);
+
+        // - use "while" because the waiting could return exceptionally
+        while (i_write < 0)
+            pthread_cond_wait(&unfull, &lock);
+
+        buffer[i_write] = product;
+        if (-1 == i_read)
+        {
+            i_read = i_write;
+            pthread_cond_signal(&unempty);
+        }
+        if (SIZE == ++i_write)
+            i_write = 0;
+        if (i_write == i_read)
+            i_write = -1;
+
+        pthread_mutex_unlock(&lock);
+    }
+
+    void consume(product_t *pproduct)
+    {
+        pthread_mutex_lock(&lock);
+
+        // - use "while" because the waiting could return exceptionally
+        while (i_read < 0)
+            pthread_cond_wait(&unempty, &lock);
+
+        *pproduct = buffer[i_read];
+        if (-1 == i_write)
+        {
+            i_write = i_read;
+            pthread_cond_signal(&unfull);
+        }
+        if (SIZE == ++i_read)
+            i_read = 0;
+        if (i_read == i_write)
+            i_read = -1;
+
+        pthread_mutex_unlock(&lock);
+    }
+                ]]></programlisting>
+            </example>
+        </sect3>
+    </sect2>
+</sect1>

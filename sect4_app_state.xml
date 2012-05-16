@@ -1,0 +1,46 @@
+<sect1 xmlns="http://docbook.org/ns/docbook"
+       xmlns:xi="http://www.w3.org/2001/XInclude">
+    <title>4 - application state</title>
+    <para>在ios4中，应用程序可以在以下几种状态间切换：</para>
+    <itemizedlist>
+        <title>application state</title>
+        <listitem>not running
+            <simplelist>
+                <member>如果在应用的Info.plist中设置了UIApplicationExitsOnSuspend键的值为YES，那么用户按下home键将导致应用退出；系统可能会（因为内存紧张）终止一个挂起的应用；或者应用本身crash。</member>
+            </simplelist>
+        </listitem>
+        <listitem>active
+            <simplelist>
+                <member>前台运行，拥有屏幕显示和用户输入。</member>
+            </simplelist>
+        </listitem>
+        <listitem>background
+            <simplelist>
+                <member>后台运行，不能访问屏幕显示和用户输入。按下home键将导致应用切换到后台，其中大部分随即挂起，也有的持续后台运行，直到切换回前台。</member>
+            </simplelist>
+        </listitem>
+        <listitem>suspended
+            <simplelist>
+                <member>暂停（也称为挂起）。缺省情况下，按下home键最终将导致应用挂起。</member>
+            </simplelist>
+        </listitem>
+        <listitem>inactive
+            <simplelist>
+                <member>前台和后台之间的中间状态，通常仍可能更新屏幕显示但已不能获取用户输入；通常随即切换到前台或后台，除非当用户锁屏或有系统提示时（来电或短信，如果取消，即切换回前台，如果回覆，则切换到后台）。</member>
+            </simplelist>
+        </listitem>
+    </itemizedlist>
+    <sect2>
+        <title>4.1 - state notification</title>
+        <para>状态改变时，应用会（在主线程）向application delegate发送消息并向通知中心发送通知。</para>
+        <itemizedlist>
+            <title>state notification</title>
+            <listitem>not running --> inactive: UIApplicationDidFinishLaunchingNotification</listitem>
+            <listitem>inactive --> active: UIApplicationDidBecomeActiveNotification</listitem>
+            <listitem>active --> inactive: UIApplicationWillResignActiveNotification；通常应用应该停止更新屏幕显示（如暂停动画）。</listitem>
+            <listitem>inactive --> background: UIApplicationDidEnterBackgroundNotification；如果随即挂起，通常应用应该卸载资源（-->inactive时可重新加载）以及释放当应用挂起时必定丢失的（如网络连接）；注意，有资料称如果（主线程）超过5秒还未返回就会被系统终止（-->not running）并且可以通过application的beginBackgroundTaskWithExpirationHandler:（配以endBackgroundTask:）方法请求额外的background时间并启动后台任务来处理以延长这一时限，但测试并未证实这一点。</listitem>
+            <listitem>background --> inactive: UIApplicationWillEnterForegroundNotification</listitem>
+            <listitem>background --> not running: UIApplicationWillTerminateNotification</listitem>
+        </itemizedlist>
+    </sect2>
+</sect1>
