@@ -1,8 +1,8 @@
 <article xmlns="http://docbook.org/ns/docbook"
          xmlns:xi="http://www.w3.org/2001/XInclude">
     <title>multitasking</title>
-    <xi:include href="sect1_design_of_app_arch.xml" />
-    <xi:include href="sect2_task_n_queue.xml" />
-    <xi:include href="sect3_thread.xml" />
-    <xi:include href="sect4_app_state.xml" />
+    <xi:include href="1_design_of_app_arch.xml" />
+    <xi:include href="2_task_n_queue.xml" />
+    <xi:include href="3_thread.xml" />
+    <xi:include href="4_app_state.xml" />
 </article>
