@@ -5,35 +5,79 @@
         <title>1.1 - console &amp; gui</title>
         <figure>
             <title>console &amp; gui</title>
-            <inlinegraphic fileref="../img/console.png" />
-            <inlinegraphic fileref="../img/gui.png" />
+            <graphic fileref="../img/gui.png" align="center" />
         </figure>
-        <para> 对于console程序，每个应用都有特定的交互（ui）机制；gui系统则为应用提供了通用的ui框架（通用的事件处理，响应由应用定制），gui框架通常使用消息绑定（使用虚函数会导致复杂的静态结构和大量的虚函数表项冗余）。应用逻辑理论上应该可重用于不同的ui，为此引入了控制器和mvc模式。</para>
+        <para>对于console程序，每个应用都有特定的交互（ui）机制；gui系统则为应用提供了通用的ui框架（通用的ui事件处理，响应由应用定制），gui框架通常使用消息绑定（使用虚函数会导致复杂的静态结构和大量的虚函数表项冗余）。业务逻辑（domain logic）理论上应该可以重用于不同的ui，为此引入了控制器和mvc模式。</para>
     </sect2>
     <sect2>
         <title>1.2 - mvc</title>
         <figure>
             <title>mvc</title>
-            <inlinegraphic fileref="../img/mvc.png" />
+            <graphic fileref="../img/mvc.png" align="center" />
         </figure>
         <itemizedlist>
-            <listitem>ui消息包括视图消息（对应视图事件，应用的响应以视图本身规定的方式影响视图），通常用delegate（按视图规定的协议）定制；用户消息（对应用户事件），通常用视图自有的消息总线（target-action）（无协议）定制（指定视图的指定事件的响应）。应用消息，系统消息和应用通知均由应用逻辑定义（可重用于不同的ui和系统），通常用消息总线绑定。</listitem>
-            <listitem>应用逻辑内部仍可以划分机制（业务机制）和策略，也仍可以使用delegate, target-action等定制机制，如果有需要重用于不同框架的定制部分，仍可以用消息总线绑定。</listitem>
-            <listitem>使用消息总线，应用逻辑可以灵活部署：进程内，进程外，网络（包括web）；并且使得视图控制器和系统控制器也可以分开部署。</listitem>
+            <listitem>控制器中不应包含业务逻辑，因此应提供足够大粒度的业务对象；为此模型可以提供最大粒度的model对象，负责响应所有的模型消息以及发送所有的模型通知。</listitem>
+            <listitem>ui消息包括视图消息（对应视图事件，应用的响应以视图本身规定的方式影响视图），通常用delegate（按视图规定的协议）定制；用户消息（对应用户事件），通常用视图自有的消息总线（target-action）（无协议）定制（指定视图的指定事件的响应）。</listitem>
+            <listitem>模型消息和模型通知均由业务逻辑定义。控制器向模型发送模型消息，并作为模型的delegate定制模型通知；也就是说，视图和模型都是可重用的（框架）并均由控制器定制。</listitem>
+            <listitem>模型消息和模型通知也可以用消息总线绑定以便于支持跨进程边界（可部署在进程外，网络）以及跨语言平台（如以web view及js作为视图及实现控制器）的模型。</listitem>
+            <listitem>模型内部仍可以划分机制（业务机制）和策略，也仍可以使用delegate, target-action等定制机制，如果有需要重用于不同框架的定制部分，仍可以用消息总线绑定。</listitem>
+        </itemizedlist>
+        <para>除了ui，应用通常还需进行其它i/o（包括端口，文件，网络等）；需要轮询的输入通常应由事件循环捕获，对于模型来说是异步的（事件），否则可由模型发起（同步）；输出对于模型来说总是同步的。同样，业务逻辑应该重用于不同的i/o，为此引入了i/o控制器。</para>
+        <figure>
+            <title>mvc with i/o</title>
+            <graphic fileref="../img/mvcio.png" align="center" />
+        </figure>
+        <itemizedlist>
+            <listitem>每个i/o控制器通常对应一个i/o端口或文件，均响应配置命令（消息）并维护配置信息（如端口类型，端口号，文件名或句柄等），模型可以提供但无需理解i/o配置；指定配置的i/o控制器即可作为模型的指定delegate进行指定业务对象（数据）的i/o（不同业务对象的sync i/o delegate可以是同一个同步i/o控制器）或指定输入事件的响应，模型即不需再为每次i/o提供配置。但如果同类业务对象的不同实例需要不同的i/o配置，则通常需在业务对象中包含其i/o配置（同样，业务对象可以提供但无需理解i/o配置）；典型的如并发tcp服务器，异步输入控制器将接受到的连接（句柄）通过模型消息（如sessionAcceptedWithHandle:）发送给模型，模型构造对应的session对象并在其中包含该句柄（其i/o配置），session i/o delegate（session i/o控制器）即可用该句柄进行i/o。</listitem>
+            <listitem>模型，初始视图控制器，i/o控制器通常在应用初始化时构造；但i/o控制器有时需由模型在指定情况下构造，为免于此，应用初始化时通常构造一个顶级的同步i/o控制器和一个顶级的异步输入控制器，作为模型唯一的sync i/o delegate和唯一的async input delegate负责维护各个业务对象或输入事件对应的i/o配置。此外，应用初始化时还可以向i/o控制器发送控制消息（配置，启动，停止）。</listitem>
+            <listitem>对于模型来说，模型消息通常提供输入；视图控制器发送的模型消息典型如userLoginningWithName:passwd:；异步输入控制器发送的模型消息典型如truckDetectedWithID:。向视图控制器发送的模型通知通常是模型的输出，典型如userLoginned:；向异步输入控制器发送的模型通知则是控制消息，典型如startPhisicInput；向同步i/o控制器发送的只有i/o消息（典型如getTruckLicenseWithID:）和配置（控制）消息。</listitem>
         </itemizedlist>
     </sect2>
     <sect2>
         <title>1.3 - concurrency</title>
-        <para>多个事件发生的时间太接近以致应用来不及以顺序的方式响应即称为并发。应用通过两种策略处理并发：多任务和异步。多任务即应用通过可同时（而非顺序）执行的多个任务同时响应并发事件（由多个事件循环及其控制器任务捕获并响应多个并发事件）。异步即应用仍以顺序的方式响应并发事件，但总是通过异步调用（不等待调用完成即返回，调用完成后以事件方式通知）方式控制响应时间以及时响应并发事件（由单个事件循环及其控制器任务捕获并（通过控制器启动多个应用逻辑任务）响应多个并发事件）；并非所有操作都支持异步，同步操作需要启动新任务（后台任务）来执行以实现异步调用（控制器启动后台任务发送应用消息（后台应用逻辑任务），后台应用逻辑任务以事件方式发送应用通知），多任务首先是一种机制，异步策略同样依赖于它。并发策略通常取决于事件循环，同一个事件循环中的事件采用异步策略处理其并发，反之则采用多任务策略。</para>
+        <para>多个事件发生的时间太接近以致应用来不及以顺序的方式响应即称为并发。应用通过两种策略处理并发：多任务和异步。多任务即应用通过可同时（而非顺序）执行的多个任务（多个事件循环）同时响应并发事件。异步即应用仍以顺序的方式响应并发事件，但总是通过异步调用（不等待调用完成即返回，调用完成后以事件方式通知（回调），最常见的是异步i/o）方式控制响应时间以及时响应并发事件；并非所有操作都支持异步，同步操作需要启动新任务（后台任务）来执行以实现异步调用，多任务首先是一种机制，异步策略同样依赖于它。并发策略通常取决于事件循环，同一个事件循环中的事件采用异步策略处理其并发，反之则采用多任务策略。</para>
+        <para>以事件方式为异步调用提供回调有一个设计上的缺陷，即功能性机制（指异步调用，如异步i/o）所需的回调需要作为业务对象的方法（该事件最终会对应一个模型消息）提供。更优雅的设计是使用闭包（如apple为c语言扩展的block）作为异步调用的回调，将回调保留在调用上下文并始终在功能层面。同理，闭包也适合作为任务，使得用同步操作实现异步调用同样优雅。</para>
+        <example>
+            <programlisting><![CDATA[
+    ...
+    DomainObject obj;
+
+    // async i/o call
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+    // closure as task
+    // - sync i/o operation on background task
+    // - delegateSyncIO is the model's sync i/o (controller) delegate
+    NSString *sth = [[model delegateSyncIO] getSomething];
+    // - remain in caller's context
+    // - obj should retain sth
+    [obj setSomething: sth];
+
+    // - dispatch closure to main thread, result dispatch event in main event
+    // - loop and then finally run the closure on main thread
+    dispatch_async(dispatch_get_main_queue(), ^{
+    // closure as task and acturally the callback of the async i/o call
+    // - another async i/o call
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+    // - sync i/o operation on background task
+    NSString *another = [[model delegateSyncIO] getAnother];
+    // - obj should retain another
+    [obj setSomething: another];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+    // - delegateView is the model's view (controller) delegate
+    [[model delegateView] domainObjectProcessed:obj];});});});});
+            ]]></programlisting>
+        </example>
         <figure>
             <title>application architecture</title>
-            <graphic fileref="../img/app_arch.png" />
+            <graphic fileref="../img/app_arch.png" align="center" />
         </figure>
         <itemizedlist>
-            <listitem>每个事件循环及其控制器均为独立任务（前台/交互任务），通常ui事件循环（界面任务）为主任务。</listitem>
-            <listitem>应用逻辑可以声明对某个应用消息的响应相对耗时，控制器即可选择启动后台任务发送该应用消息；也就是说，尽管应用逻辑内部仍可使用多任务机制，但应用逻辑本身并不决定其运行在前台还是后台。</listitem>
-            <listitem>应用逻辑通常在当前任务发送系统消息；也就是说，系统控制器通常运行在应用逻辑任务上下文。</listitem>
-            <listitem>ui操作通常不是线程安全的，只能在界面任务（主任务）上下文执行，因此，应用通知也必须在界面任务上下文发送；也就是说，如果应用逻辑（发送者）当前没有运行在界面任务上下文，则需要使用任务间的消息发送机制，即生成一个消息发送事件到目标任务的事件队列，由其事件循环在目标任务发送消息。</listitem>
+            <listitem>有事件循环的任务称为前台或交互任务，否则称为后台任务，通常ui事件循环（界面任务）为主任务。</listitem>
+            <listitem>ui操作通常不是线程安全的，只能在界面任务（主任务）上下文执行，因此，向视图控制器的模型通知必须在界面任务上下文发送。</listitem>
         </itemizedlist>
+        <sect3>
+            <title>1.3.1 - performance evaluation</title>
+        </sect3>
     </sect2>
 </sect1>
