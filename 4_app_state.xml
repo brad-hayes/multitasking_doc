@@ -38,7 +38,7 @@
             <listitem>not running --> inactive: UIApplicationDidFinishLaunchingNotification</listitem>
             <listitem>inactive --> active: UIApplicationDidBecomeActiveNotification</listitem>
             <listitem>active --> inactive: UIApplicationWillResignActiveNotification；通常应用应该停止更新屏幕显示（如暂停动画）。</listitem>
-            <listitem>inactive --> background: UIApplicationDidEnterBackgroundNotification；如果随即挂起，通常应用应该卸载资源（-->inactive时可重新加载）以及释放当应用挂起时必定丢失的（如网络连接）；注意，有资料称如果（主线程）超过5秒还未返回就会被系统终止（-->not running）并且可以通过application的beginBackgroundTaskWithExpirationHandler:（配以endBackgroundTask:）方法请求额外的background时间并启动后台任务来处理以延长这一时限，但测试并未证实这一点。</listitem>
+            <listitem>inactive --> background: UIApplicationDidEnterBackgroundNotification；如果随即挂起，通常应用应该卸载资源（-->inactive时可重新加载）以及释放当应用挂起时必定丢失的（如网络连接）；注意，有资料称如果（主线程）超过5秒还未返回就会被系统终止（-->not running）并且可以通过向application发送beginBackgroundTaskWithExpirationHandler:（配以endBackgroundTask:）消息请求额外的后台运行时间并启动后台任务来处理以延长这一时限，但测试并未证实这一点。</listitem>
             <listitem>background --> inactive: UIApplicationWillEnterForegroundNotification</listitem>
             <listitem>background --> not running: UIApplicationWillTerminateNotification</listitem>
         </itemizedlist>

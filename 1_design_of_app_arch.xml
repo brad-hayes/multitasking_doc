@@ -7,7 +7,7 @@
             <title>console &amp; gui</title>
             <graphic fileref="../img/console_n_gui.png" align="center" />
         </figure>
-        <para>对于console程序，每个应用都有特定的交互（ui）机制；gui系统则为应用提供了通用的ui框架（通用的ui事件处理，响应由应用定制），gui框架通常使用消息绑定（使用虚函数会导致复杂的静态结构和大量的虚函数表项冗余）。业务逻辑（domain logic）理论上应该可以重用于不同的ui，为此引入了控制器和mvc模式。</para>
+        <para>对于console程序，每个应用都有特定的ui（用户交互）机制；gui系统则为应用提供了通用的ui框架（通用的ui事件处理，响应由应用定制），gui框架通常使用消息绑定（使用虚函数会导致复杂的静态结构和大量的虚函数表项冗余）。业务逻辑（domain logic）理论上应该可以重用于不同的ui，为此引入了控制器和mvc模式。</para>
     </sect2>
     <sect2>
         <title>1.2 - mvc</title>
@@ -28,43 +28,48 @@
             <graphic fileref="../img/mvcio.png" align="center" />
         </figure>
         <itemizedlist>
-            <listitem>每个i/o控制器通常对应一个i/o端口或文件，均响应配置命令（消息）并维护配置信息（如端口类型，端口号，文件名或句柄等），模型可以提供但无需理解i/o配置；指定配置的i/o控制器即可作为模型的指定delegate进行指定业务对象（数据）的i/o（不同业务对象的sync i/o delegate可以是同一个同步i/o控制器）或指定输入事件的响应，模型即不需再为每次i/o提供配置。但如果同类业务对象的不同实例需要不同的i/o配置，则通常需在业务对象中包含其i/o配置（同样，业务对象可以提供但无需理解i/o配置）；如tcp服务器，异步输入控制器将接受到的连接（句柄）通过模型消息（如sessionAcceptedWithHandle:）发送给模型，模型构造对应的session对象并在其中包含该句柄（其i/o配置），session i/o delegate（session i/o控制器）即可用该句柄进行i/o。</listitem>
-            <listitem>模型，初始视图控制器，i/o控制器通常在应用初始化时构造；但i/o控制器有时需由模型在指定情况下构造，为免于此，应用初始化时通常构造一个顶级的同步i/o控制器和一个顶级的异步输入控制器，作为模型唯一的sync i/o delegate和唯一的async input delegate负责维护各个业务对象或输入事件对应的i/o配置。此外，应用初始化时还可以向i/o控制器发送控制消息（配置，启动，停止）。</listitem>
+            <listitem>每个i/o控制器通常对应一个i/o端口或文件，均响应配置命令（消息）并维护配置信息（如端口类型，端口号，文件名或句柄等），模型可以提供但无需理解i/o配置；指定配置的i/o控制器即可作为模型的指定delegate进行指定业务对象（数据）的i/o（不同业务对象的同步i/o delegate可以是同一个同步i/o控制器）或指定输入事件的响应，模型即不需再为每次i/o提供配置。但如果同类业务对象的不同实例需要不同的i/o配置，则通常需在业务对象中包含其i/o配置（同样，业务对象可以提供但无需理解i/o配置）；如tcp服务器，异步输入控制器将接受到的连接（句柄）通过模型消息（如sessionAcceptedWithHandle:）发送给模型，模型构造对应的session对象并在其中包含该句柄（其i/o配置），session i/o delegate（session i/o控制器）即可用该句柄进行i/o。</listitem>
+            <listitem>模型，初始视图控制器，i/o控制器通常在应用初始化时构造；但i/o控制器有时需由模型在指定情况下构造，为免于此，应用初始化时通常构造一个顶级的同步i/o控制器和一个顶级的异步输入控制器，作为模型唯一的同步i/o delegate和唯一的异步输入delegate负责维护各个业务对象或输入事件对应的i/o配置。此外，应用初始化时还可以向i/o控制器发送控制消息（配置，启动，停止）。</listitem>
             <listitem>对于模型来说，模型消息通常提供输入；视图控制器发送的模型消息典型如userLoginningWithName:passwd:；异步输入控制器发送的模型消息典型如truckDetectedWithID:。向视图控制器发送的模型通知通常是模型的输出，典型如userLoginned:；向异步输入控制器发送的模型通知则是控制消息，典型如startPhisicInput；向同步i/o控制器发送的只有i/o消息（典型如getTruckLicenseWithID:）和配置（控制）消息。</listitem>
         </itemizedlist>
     </sect2>
     <sect2>
         <title>1.3 - concurrency</title>
         <para>多个事件发生的时间太接近以致应用来不及以顺序的方式响应即称为并发。应用通过两种策略处理并发：多任务和异步。多任务即应用通过可同时（而非顺序）执行的多个任务同时响应（多个事件循环同时捕获）并发事件。异步即应用仍以顺序的方式响应并发事件，但总是通过异步调用（不等待操作完成即返回，操作完成后以事件方式通知（回调），最常见的是异步i/o）方式控制响应时间以及时响应并发事件；并非所有操作都支持异步，同步操作需要启动新任务（后台任务）来执行以实现异步调用，多任务首先是一种机制，异步策略同样依赖于它。并发策略通常取决于事件循环，同一个事件循环中的事件采用异步策略处理其并发，反之则采用多任务策略。</para>
-        <para>以事件方式为异步调用提供回调有一个设计上的缺陷，即功能性机制（指异步调用，如异步i/o）所需的回调需要作为业务对象的方法（该事件最终会对应一个模型消息）提供。更优雅的设计是使用闭包（如apple为c语言扩展的block）作为异步调用的回调，将回调保留在调用上下文并始终在功能层面。同理，闭包也适合作为任务，使得用同步操作实现异步调用同样优雅。</para>
+        <para>以事件方式为异步调用提供回调有一个设计上的缺陷，即功能性机制（指异步调用，如异步i/o）所需的回调需要作为业务对象的方法（该事件最终会对应一个模型消息）提供。更优雅的设计是使用闭包（如apple为c扩展的block）作为异步调用的回调，将回调保留在调用上下文并始终在功能层面。同理，闭包也适合作为任务，使得用同步操作实现异步调用同样优雅。</para>
         <example>
+            <title>block as callback of async call</title>
             <programlisting><![CDATA[
     ...
     DomainObject obj;
 
-    // async i/o call
+    // perform an async i/o call
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
-    // closure as task
-    // - sync i/o operation on background task
-    // - delegateSyncIO is the model's sync i/o (controller) delegate
+    // this closure as a (background) task
+    // - perform the sync i/o operation on the background task
+    // - delegateSyncIO: the model's sync i/o (controller) delegate
     NSString *sth = [[model delegateSyncIO] getSomething];
-    // - remain in caller's context
-    // - obj should retain sth
+    // - remaining in the caller's context, "obj" still accessable
+    // - note: "obj" should retain "sth" to avoid its destruction, because "sth"
+    // - would be autoreleased after this closure return
     [obj setSomething: sth];
 
-    // - dispatch closure to main thread, result dispatch event in main event
-    // - loop and then finally run the closure on main thread
+    // - dispatch another closure to the main thread, a dispatch event would be
+    // - put to the main event loop so the closure would be performed on the
+    // - main thread
     dispatch_async(dispatch_get_main_queue(), ^{
-    // closure as task and acturally the callback of the async i/o call
-    // - another async i/o call
+    // this closure actually as the callback of the async i/o
+    // - the previous i/o operation completed, so perform the next async i/o
+    // - call
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
-    // - sync i/o operation on background task
-    NSString *another = [[model delegateSyncIO] getAnother];
-    // - obj should retain another
-    [obj setSomething: another];
+    // - perform the sync i/o operation on the background task
+    NSString *others = [[model delegateSyncIO] getOthers];
+    // - note: "obj" should retain "others"
+    [obj setOthers: others];
 
     dispatch_async(dispatch_get_main_queue(), ^{
-    // - delegateView is the model's view (controller) delegate
+    // this closure as the callback of the 2nd async i/o
+    // - delegateView: the model's view (controller) delegate
     [[model delegateView] domainObjectProcessed:obj];});});});});
             ]]></programlisting>
         </example>
@@ -73,8 +78,8 @@
             <graphic fileref="../img/app_arch.png" align="center" />
         </figure>
         <itemizedlist>
-            <listitem>有事件循环的任务称为前台或交互任务，否则称为后台任务，通常ui事件循环（界面任务）为主任务。</listitem>
-            <listitem>ui操作通常不是线程安全的，只能在界面任务（主任务）上下文执行，因此，向视图控制器的模型通知必须在界面任务上下文发送。</listitem>
+            <listitem>有事件循环的任务称为前台或交互任务，否则称为后台任务，通常ui事件循环（ui任务）为主任务。</listitem>
+            <listitem>ui操作通常不是线程安全的，只能在ui任务（主任务）上下文执行，因此，向视图控制器的模型通知必须在ui任务上下文发送。</listitem>
         </itemizedlist>
         <sect3>
             <title>1.3.1 - performance evaluation</title>
