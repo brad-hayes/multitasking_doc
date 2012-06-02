@@ -1,6 +1,6 @@
 <sect1 xmlns="http://docbook.org/ns/docbook"
        xmlns:xi="http://www.w3.org/2001/XInclude">
-    <title>2 - task and queue</title>
+    <title>2 - task &amp; queue</title>
     <para>传统的多任务机制是进程和线程（对于单个应用来说主要是线程），由操作系统提供。mac os x和ios还提供了更高层（作为应用首选）的多任务机制：框架级的cocoa operation queue和系统级的grand central dispatch queue；每个队列管理一个线程池，任务（在逻辑上同时执行的代码单位）不是作为线程由操作系统直接调度（分配到处理器），而是通过进入队列（称为分派到队列）来由队列调度（分配到线程）。队列会根据系统负载动态调整线程池中的线程数，以最大利用多核处理器的性能；此外，队列的顺序特性（fifo）可以为某些任务同步方式（如互斥）提供更方便和高效的支持。但队列对任务的调度不如操作系统对线程的调度及时，队列中的任务分配到线程相比线程分配到处理器需要更长的时间（操作系统对线程的调度是分时的，队列对其中任务的调度是批处理的），因此不适合象线程那样用来缩短并发的响应时间（不适合在传统的同步模式中使用）。</para>
     <sect2>
         <title>2.1 - dispatch queue</title>

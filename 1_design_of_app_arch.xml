@@ -5,7 +5,7 @@
         <title>1.1 - console &amp; gui</title>
         <figure>
             <title>console &amp; gui</title>
-            <graphic fileref="../img/gui.png" align="center" />
+            <graphic fileref="../img/console_n_gui.png" align="center" />
         </figure>
         <para>对于console程序，每个应用都有特定的交互（ui）机制；gui系统则为应用提供了通用的ui框架（通用的ui事件处理，响应由应用定制），gui框架通常使用消息绑定（使用虚函数会导致复杂的静态结构和大量的虚函数表项冗余）。业务逻辑（domain logic）理论上应该可以重用于不同的ui，为此引入了控制器和mvc模式。</para>
     </sect2>
