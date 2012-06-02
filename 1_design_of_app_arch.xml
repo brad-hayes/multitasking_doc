@@ -28,7 +28,7 @@
             <graphic fileref="../img/mvcio.png" align="center" />
         </figure>
         <itemizedlist>
-            <listitem>每个i/o控制器通常对应一个i/o端口或文件，均响应配置命令（消息）并维护配置信息（如端口类型，端口号，文件名或句柄等），模型可以提供但无需理解i/o配置；指定配置的i/o控制器即可作为模型的指定delegate进行指定业务对象（数据）的i/o（不同业务对象的sync i/o delegate可以是同一个同步i/o控制器）或指定输入事件的响应，模型即不需再为每次i/o提供配置。但如果同类业务对象的不同实例需要不同的i/o配置，则通常需在业务对象中包含其i/o配置（同样，业务对象可以提供但无需理解i/o配置）；典型如tcp服务器，异步输入控制器将接受到的连接（句柄）通过模型消息（如sessionAcceptedWithHandle:）发送给模型，模型构造对应的session对象并在其中包含该句柄（其i/o配置），session i/o delegate（session i/o控制器）即可用该句柄进行i/o。</listitem>
+            <listitem>每个i/o控制器通常对应一个i/o端口或文件，均响应配置命令（消息）并维护配置信息（如端口类型，端口号，文件名或句柄等），模型可以提供但无需理解i/o配置；指定配置的i/o控制器即可作为模型的指定delegate进行指定业务对象（数据）的i/o（不同业务对象的sync i/o delegate可以是同一个同步i/o控制器）或指定输入事件的响应，模型即不需再为每次i/o提供配置。但如果同类业务对象的不同实例需要不同的i/o配置，则通常需在业务对象中包含其i/o配置（同样，业务对象可以提供但无需理解i/o配置）；如tcp服务器，异步输入控制器将接受到的连接（句柄）通过模型消息（如sessionAcceptedWithHandle:）发送给模型，模型构造对应的session对象并在其中包含该句柄（其i/o配置），session i/o delegate（session i/o控制器）即可用该句柄进行i/o。</listitem>
             <listitem>模型，初始视图控制器，i/o控制器通常在应用初始化时构造；但i/o控制器有时需由模型在指定情况下构造，为免于此，应用初始化时通常构造一个顶级的同步i/o控制器和一个顶级的异步输入控制器，作为模型唯一的sync i/o delegate和唯一的async input delegate负责维护各个业务对象或输入事件对应的i/o配置。此外，应用初始化时还可以向i/o控制器发送控制消息（配置，启动，停止）。</listitem>
             <listitem>对于模型来说，模型消息通常提供输入；视图控制器发送的模型消息典型如userLoginningWithName:passwd:；异步输入控制器发送的模型消息典型如truckDetectedWithID:。向视图控制器发送的模型通知通常是模型的输出，典型如userLoginned:；向异步输入控制器发送的模型通知则是控制消息，典型如startPhisicInput；向同步i/o控制器发送的只有i/o消息（典型如getTruckLicenseWithID:）和配置（控制）消息。</listitem>
         </itemizedlist>
