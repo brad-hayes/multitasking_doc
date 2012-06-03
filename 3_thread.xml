@@ -8,7 +8,7 @@
     int pthread_create(pthread_t *thread,
                        pthread_attr_t const *attr,
                        void *(*start_routine)(void *), void *arg);
-    // - terminate calling thread, the same as to return
+    // - terminate the calling thread, the same as to return
     void pthread_exit(void *ret);
 
     int pthread_join(pthread_t thread, void **ret);
@@ -41,7 +41,7 @@
         - (BOOL) isExecuting;
         - (BOOL) isFinished;
 
-        // - if the application in multi-threaded state
+        // - if the application in the multi-threaded state
         + (BOOL) isMultiThreaded;
 
     NSObject:
@@ -55,11 +55,12 @@
     NSRunLoop:
         + (NSRunLoop *) currentRunLoop;
 
+        // - run this runloop
         - (BOOL) runMode: (NSString *)mode beforeDate: (NSDate *)date;
 
-        // - repeat runloop in NSDefaultRunLoopMode infinitely (as event loop)
+        // - repeat run this runloop in NSDefaultRunLoopMode infinitely
         - (void) run;
-        // - repeat runloop in NSDefaultRunLoopMode until date (as event loop)
+        // - repeat run this runloop in NSDefaultRunLoopMode until date
         - (void) runUntilDate: (NSDate *)date;
         ]]></programlisting>
         <sect3>
@@ -68,7 +69,7 @@
             <programlisting><![CDATA[
     NSPort:
         + (NSPort *) port;
-        // - note: must invalidat before released
+        // - note: must invalidated before released
         - (void) invalidate;
 
         - (void) setDelegate: (id<NSPortDelegate>)obj;
@@ -85,10 +86,10 @@
                            forMode: (NSString *)mode
 
     NSPortDelegate:
-        // - no interface of NSPortMessage in ios
+        // - no NSPortMessage's interface in ios
         - (void) handlePortMessage: (NSPortMessage *)message;
 
-    // no interface in ios
+    // no interface of this in ios
     NSPortMessage:
         - (uint32_t) msgid;
         - (NSArray *) components;

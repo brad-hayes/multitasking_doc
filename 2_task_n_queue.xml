@@ -42,7 +42,7 @@
     void dispatch_group_async(dispatch_group_t group,
                               dispatch_queue_t queue,
                               dispatch_block_t block);
-    // - schedule the specified block after the group finished
+    // - schedule the block after the group finished
     void dispatch_group_notify(dispatch_group_t group,
                                dispatch_queue_t queue,
                                dispatch_block_t block);
