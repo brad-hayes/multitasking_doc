@@ -18,7 +18,7 @@
     int pthread_attr_setdetachstate(pthread_attr_t *attr, int state);
     int pthread_attr_destroy(pthread_attr_t *attr);
         ]]></programlisting>
-        <para>NSThread的类方法detachNewThreadSelector:toTarget:withObject:（从mac os x v10.5之后及ios中，等价于目标对象的performSelectorInBackground:withObject:方法）用于启动新线程并在新线程执行目标对象的指定方法并传入指定参数对象，由于该方法返回void，因此应用只能在新线程启动后在新线程中获取thread并访问其属性。从mac os x v10.5之后及ios中，还可以先构造thread再启动，以便在新线程启动之前即可访问thread的属性（如栈大小）。线程在终止之前会retain目标对象及参数对象；此外，每个线程同样需要独立的最外层的autorelease pool。注意，当应用中首次用cocoa thread启动新线程时，应用会切换为多线程状态（发送NSWillBecomeMultiThreadedNotification通知（到通知中心）），cocoa仅当应用处于多线程状态时使用同步机制（以免影响单线程应用的性能）；pthread不会导致应用切换线程状态，因此如果需要使用cocoa就必须手工切换（通常用cocoa thread启动空白线程（什么都不做即返回）即可）。</para>
+        <para>cocoa thread可以用NSThread的类方法detachNewThreadSelector:toTarget:withObject:（从mac os x v10.5之后及ios中，等价于目标对象的performSelectorInBackground:withObject:方法）启动并在新线程执行目标对象的指定方法并传入指定参数对象，该方法返回void，应用只能在新线程启动后在新线程中获取cocoa thread并访问其属性。从mac os x v10.5之后及ios中，还可以先构造cocoa thread再启动，以便在新线程启动之前即可访问cocoa thread的属性（如栈大小）。cocoa thread在终止之前会retain目标对象及参数对象；此外，每个线程同样需要独立的最外层的autorelease pool。注意，当应用中首次启动cocoa thread时，应用会切换为多线程状态（发送NSWillBecomeMultiThreadedNotification通知（到通知中心）），cocoa仅当应用处于多线程状态时使用同步机制（以免影响单线程应用的性能）；pthread不会导致应用切换线程状态，因此如果需要使用cocoa就必须手工切换（通常启动空白cocoa thread（什么都不做即返回）即可）。</para>
         <programlisting><![CDATA[
     NSThread:
         + (void) detachNewThreadSelector: (SEL)sel
