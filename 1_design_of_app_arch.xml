@@ -51,12 +51,12 @@
     NSString *sth = [[model delegateSyncIO] getSomething];
     // - remaining in the caller's context, "obj" still accessable
     // - note: "obj" should retain "sth" to avoid its destruction, because "sth"
-    // - would be autoreleased after this closure return
+    // - would autoreleased after this closure return
     [obj setSomething: sth];
 
-    // - dispatch another closure to the main thread, a dispatch event would be
-    // - put to the main event loop so the closure would be performed on the
-    // - main thread
+    // - dispatch another closure to the main thread, a dispatch event would put
+    // - to the main event loop so the closure would performed on the main
+    // - thread
     dispatch_async(dispatch_get_main_queue(), ^{
     // this closure actually as the callback of the async i/o
     // - the previous i/o operation completed, so perform the next async i/o

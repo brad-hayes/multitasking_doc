@@ -21,7 +21,7 @@
                         dispatch_queue_t queue,
                         void (^block)(size_t));
 
-    // note: could be used to resume and suspend dispatch sources
+    // note: could used to resume and suspend dispatch sources
     void dispatch_resume(dispatch_object_t obj);
     void dispatch_suspend(dispatch_object_t obj);
 
