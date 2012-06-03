@@ -65,7 +65,7 @@
     };
             ]]></programlisting>
         </example>
-        <para>注意，每个任务都需要独立的最外层的autorelease pool。在mac os x和ios中，每个线程都有独立的autorelease pool栈和异常跳转环境栈；主线程在application（NSApplication或UIApplication）的run方法中为runloop的每个事件句柄都提供了autorelease pool，dispatch queue为其中的每个任务也提供了autorelease pool；但只有mac os x sdk在NSApplication的run方法中提供了最外层的异常捕获（ios sdk没有为application以及dispatch queue中的任务提供异常捕获）。</para>
+        <para>注意，每个任务都需要独立的最外层的autorelease pool。在mac os x和ios中，每个线程都有独立的autorelease pool栈和异常跳转环境栈；主线程在application（NSApplication或UIApplication）的run方法中为runloop的每个事件句柄都提供了autorelease pool，dispatch queue为其中的每个任务也提供了autorelease pool；但只有mac os x sdk在NSApplication类的run方法中提供了最外层的异常捕获（ios sdk没有为application以及dispatch queue中的任务提供异常捕获）。</para>
         <para>此外，应用还可以用dispatch source自动（无需事件循环）捕获并由指定的任务（称为事件句柄，在指定的dispatch queue）响应各种系统事件，包括定时，信号，（文件和socket）描述符，进程，mach port等。dispatch source会以事件特定的方式合并在事件句柄开始响应之前发生的事件，事件句柄正在响应时发生的事件则会保留，等待事件句柄执行完毕后响应。dispatch source初始为suspended状态，需要应用手工resume。dispatch source在取消之前会retain其目标dispatch queue，取消时会回调cancel句柄（对于dispatch source，通常用cancel句柄代替finalizer）。由于通常用dispatch source自动捕获事件，因此dispatch queue中的任务通常均为后台任务（没有事件循环）；通常只有主线程有事件循环，支持在指定线程（主线程）执行代码，即将任务分派到主队列。</para>
         <programlisting><![CDATA[
     dispatch_source_t dispatch_source_create(dispatch_source_type_t type,
